@@ -77,6 +77,6 @@ The disk process is virtual, and some of the operations are generated to keep th
 
 ### Sample
 
-We include a sample cfg, that show how many accesses and where we have in the disk in paraver.
+I include a sample cfg, that shows how many accesses and where we have them in the disk.
 
     
