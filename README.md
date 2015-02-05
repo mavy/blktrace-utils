@@ -8,6 +8,8 @@ Ramon Nou @ Barcelona Supercomputing Center (2014)
 
 ## Installation / Compilation
 
+`> autoreconf --install`
+
 `> ./configure`
 
 `> make`
