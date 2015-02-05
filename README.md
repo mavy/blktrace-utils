@@ -8,8 +8,6 @@ Ramon Nou @ Barcelona Supercomputing Center (2014)
 
 ## Installation / Compilation
 
-`> autoreconf --install`
-
 `> ./configure`
 
 `> make`
@@ -29,7 +27,7 @@ Stop the trace generation with ctrl+c
 
 ## blktrace2stats
 
-Using a blktrace trace as basis, we can extract basic statistics about operations (merges, number of reads, syncs) that help to analyze the changes done in the filesystem. For example, if the I/O is better aligned we will have more merges, reducing the number of requests going to the disk driver.
+Using a blktrace trace, we can extract basic statistics about operations (merges, number of reads, syncs) that help to analyze the changes done in the filesystem. For example, if the I/O is better aligned we will have more merges, reducing the number of requests going to the disk driver.
 
 ### Usage: 
 `> blktrace2stats -i <inputbinarytrace> -w (wiki output) -c (compact output) -W <width>`
@@ -59,34 +57,26 @@ On this example we can see how the number of request completed returning from th
 
 ## blktrace2prv
 
-Using a blktrace trace as basis, we can extract basic statistics about operations (merges, number of reads, syncs) that help to analyze the changes done in the filesystem. For example, if the I/O is better aligned we will have more merges, reducing the number of requests going to the disk driver.
+Using a blktrace trace, we can extract a paraver trace to provide a timeline of the disk and process I/O activity.
 
 ### Usage: 
-`> blktrace2stats -i <inputbinarytrace> -w (wiki output) -c (compact output) -W <width>`
+`> blktrace2prv -i <inputbinarytrace> -o <trace name> -c (communications)`
 
 ####Options
 
 - `-i <inputbinarytrace>` is a blktrace trace, parsed using blkparse: `blkparse -d <binarytrace> -i <trace>`
 
-- `-w`: Optional, activates mediawiki table output
-- `-c`: (Optional) Activates compacted format, Reads from the different layers (Issue, Dispatch, Complete) will be separated by a '/' instead of a tab
-- `-W <width>`: (Optional) Specifies the width of the columns. If the number does not fits the width, it will be rounded to K units.
+- `-o <trace name>` is the prefix of the paraver trace output
+- `-c`: (Optional) Activates the generation of communication lines (including physical and logical delays). The trace will become larger.
+
 
 ### Considerations
 
-The 0 process, follows the standard semantics of blktrace. Nearly all the completions are marked with the 0 process (root process). The process name is the last one, but it should not be considered as the only one.
+The disk process is virtual, and some of the operations are generated to keep the semantics of I/O Stack. However, use the original blktrace (via blkparse) to assess that all is working as intended.
 
- ReadAheads are counted on the queue event, as they are converted to standard reads when they enter the scheduler.
 
-### Example:
-    
-    Process  PID  RMD  WMD              R             RS              W             WS   RA    M    I    D    C
-    hexdump 7306   70   53 7288/7168/2196          0/0/0        0/2/113         0/3/56 2308   24 7288 7296 2365
-   
-    MD=Metadata, R = READ, W = WRITE, S = SYNC,  M = Merge, RA=Read Ahead, I = Send to Queues, D = Send to Driver, C = Complete,
+### Sample
 
-On this example we can see how the number of request completed returning from the disk are low compared to the dispatched ones, merges are low so it means that the merges are done at the disk level.
-
+We include a sample cfg, that show how many accesses and where we have in the disk in paraver.
 
     
-
