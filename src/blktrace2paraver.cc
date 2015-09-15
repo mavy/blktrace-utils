@@ -43,7 +43,12 @@ using namespace std;
 
 /* Parameters */
 bool COMMS = false; /* Include communications */
+bool ENERGY = false;
 
+
+unsigned int PIDDISK = 1;
+unsigned int PIDE5 = 999999+1;
+unsigned int PIDE12 = 999999+2;
 map < int, string > pid2name;
 
 /* List of events captured */
@@ -68,6 +73,7 @@ enum class EVENTS {
     RA,
     FRONTMERGE,
     BACKMERGE,
+    ENERGY,
     LAST_ELEMENT
 };
 
@@ -80,6 +86,8 @@ enum class TYPES {
     WRITEMETA,
     MERGE,
     RA,
+    ENERGY5,
+    ENERGY12,
     LAST_ELEMENT
 };
 
@@ -124,7 +132,8 @@ PCF << "18    MERGE" << endl;
 PCF << "19    RA" << endl;
 PCF << "20    FRONTMERGE" << endl;
 PCF << "21    BACKMERGE" << endl;
-PCF << "22    LAST_ELEMENT" << endl;
+PCF << "22    ENERGY" << endl;
+PCF << "23    LAST_ELEMENT" << endl;
 
 PCF << "DEFAULT_SEMANTIC" << endl;
 
@@ -139,6 +148,8 @@ PCF << "0  100004  READMETA" << endl;
 PCF << "0  100005  WRITEMETA" << endl;
 PCF << "0  100006  MERGE" << endl;
 PCF << "0  100007  READAHEAD" << endl;
+PCF << "0  100008  ENERGY5" << endl;
+PCF << "0  100009  ENERGY12" << endl;
 PCF << "VALUES" << endl;
 PCF << "0 Completed" << endl;
 PCF << "1    ISSUE" << endl;
@@ -307,8 +318,8 @@ public:
                     {
                         PAR << "2:" << trace.cpu+1 << ":1:1:" << PIDS[I->first] << ":" << (unsigned long long) (trace.time) << ":" << EVENTID << ":" << EVENTV << endl;
                     
-                        if (COMMS and I->first != 1) PAR << "3:"
-                        << trace.cpu+1 << ":1:1:" << PIDS[1] << ":" << (unsigned long long) (trace.time) << ":"  << trace.time << ":"
+                        if (COMMS and I->first != PIDDISK) PAR << "3:"
+                        << trace.cpu+1 << ":1:1:" << PIDDISK << ":" << (unsigned long long) (trace.time) << ":"  << trace.time << ":"
                         << trace.cpu+1 << ":1:1:" << PIDS[I->first] << ":" << (unsigned long long) (trace.time) << ":"  << trace.time << ":" << trace.bytes << ":" << trace.sector << endl;
                       }
                     ++I;
@@ -336,7 +347,7 @@ public:
             {
                 convertEvent(EVENTID, EVENTV);
 
-                PAR << "2:" << trace.cpu+1 << ":1:1:" << 1 << ":" << (unsigned long long) (trace.time) << ":" << EVENTID << ":" << EVENTV << endl;
+                PAR << "2:" << trace.cpu+1 << ":1:1:" << PIDDISK << ":" << (unsigned long long) (trace.time) << ":" << EVENTID << ":" << EVENTV << endl;
                 INFLY_PER_EVENT[EVENTID][1].push_back( P (trace.sector, trace.bytes) );
                 
                 unsigned long long originalsendTime = search_time (WANT_SEND[trace.pid],true);
@@ -344,7 +355,7 @@ public:
                 /* Generate communication line */
                 if (COMMS) PAR << "3:" << trace.cpu+1 << ":1:1:" << PIDS[trace.pid] << ":" << (unsigned long long) (originalsendTime) << ":"
                     << (unsigned long long) ( trace.time ) << ":"
-                    << trace.cpu+1 << ":1:1:" << 1 << ":" <<  (unsigned long long) trace.time << ":"
+                    << trace.cpu+1 << ":1:1:" << PIDDISK << ":" <<  (unsigned long long) trace.time << ":"
                     << (unsigned long long) (trace.time ) << ":"
                     << trace.bytes << ":" << trace.sector << endl;
             }
@@ -376,20 +387,21 @@ public:
 
 
 string ofilename = "";
+string efilename = "";
 int
 main (int argc, char **argv)
 {
     string ifilename;
 
     if (argc < 2)  {
-        cerr << "Ramon Nou @ Barcelona Supercomputing Center" << endl << "Usage: blktrace2parever -i <inputbinarytrace> -o <outputtracename> -c (include comms)" << endl;
+        cerr << "Ramon Nou @ Barcelona Supercomputing Center" << endl << "Usage: blktrace2parever -i <inputbinarytrace> -o <outputtracename> -c (include comms) -e <energy>" << endl;
         exit(-1);
     }
 
     int opterr = 0;
     int c;
 
-    while ((c = getopt (argc, argv, "i:o:c")) != -1)
+    while ((c = getopt (argc, argv, "i:o:ce:")) != -1)
         switch (c) {
         case 'i':
             ifilename = optarg;
@@ -401,6 +413,10 @@ main (int argc, char **argv)
         case 'c':
             COMMS = true;
             break;
+	case 'e':
+            ENERGY = true;
+	    efilename = optarg;
+	    break;
 
         case '?':
             cerr << "Ramon Nou @ Barcelona Supercomputing Center" << endl << "Usage: blktrace2parever -i <inputbinarytrace> -o <outputtracename> -c (include comms)" << endl;
@@ -433,15 +449,34 @@ main (int argc, char **argv)
         cerr << "We have some problem with the input file, check " << endl;
         exit(-1);
     }
+    
+    ifstream efs;
 
+    if (ENERGY) {
+	efs.open (efilename.c_str());
+        if (!(efs.is_open() and efs.good())) {
+        cerr << "We have some problem with the energy file, check " << endl;
+        exit(-1);
+        }
+    }
+
+	
     blk_io_trace trace;
 
+    
     // We generate a Virtual "thread" that simulates the disk activity
-    numPID = 2;
+    numPID = 4;
     PIDS[1] = 1; 
     RPIDS[1] = 1;
     pid2name[1] = "Disk";
     
+    PIDS[999999+1] = 2;
+    RPIDS[2] = 999999+1;
+    pid2name[999999+1] = "Energy - Logic";
+
+    PIDS[999999+2] = 3;
+    RPIDS[3] = 999999+2;
+    pid2name[999999+2] = "Energy - Mech";
 
     while ((ifs.is_open () and ifs.good ())) {
         ifs.read ((char *) &trace, sizeof (blk_io_trace));
@@ -451,6 +486,26 @@ main (int argc, char **argv)
 
     ifs.close ();
 
+    if (ENERGY)
+    {
+	double initial = -1;
+        while ((efs.is_open () and efs.good ())) {
+           double ts;
+    	   unsigned int ma5, ma12;
+           efs >> ts >> ma5 >> ma12;
+	   if ( initial < 0) initial = ts;
+        
+       unsigned int   EVENTID = static_cast<unsigned int> (TYPES::ENERGY5);
+
+	PAR << "2:" << 1 << ":1:1:" << PIDS[PIDE5] << ":" << (unsigned long long) ((ts-initial)*1000000000.0) << ":" << EVENTID << ":" << ma5 << endl;
+    EVENTID = static_cast<unsigned int> (TYPES::ENERGY12);
+
+    PAR << "2:" << 1 << ":1:1:" <<  PIDS[PIDE12] << ":" << (unsigned long long) ((ts-initial)*1000000000.0) << ":" << EVENTID << ":" << ma12 << endl;
+    }
+	efs.close();
+
+
+    }
 
     // Generacion del fichero de nombres (ROW)
     ofstream ROW;
