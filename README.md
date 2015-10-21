@@ -1,7 +1,7 @@
 # blktrace-utils
 Some utils for blktrace binary output, including a translator to paraver trace format: [Paraver at BSC](http://www.bsc.es/computer-sciences/performance-tools/paraver)
 
-These utilities were created for IOLanes EU project to analyze what was happening in the I/O Stack. 
+These utilities were created for IOLanes EU project and IOStack H2020 project to analyze what was happening in the I/O Stack. 
 
 ## Author
 Ramon Nou @ Barcelona Supercomputing Center (2014)
